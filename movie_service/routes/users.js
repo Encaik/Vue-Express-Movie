@@ -128,28 +128,28 @@ router.post('/postComment', function (req, res, next) {
 });
 router.post('/support', function (req, res, next) {
   if (!req.body.movie_id) {
-    res.json({status: 1, message: "电影id传递失败"})
+    res.json({ status: 1, message: "电影id传递失败" })
   }
   movie.findById(req.body.movie_id, function (err, supportMovie) {
-      movie.update({_id: req.body.movie_id}, {movieNumSuppose: supportMovie.movieNumSuppose + 1}, function (err) {
-          if (err) {
-              res.json({status: 1, message: "点赞失败", data: err})
-          }
-          res.json({status: 0, message: '点赞成功'})
-      })
+    movie.update({ _id: req.body.movie_id }, { movieNumSuppose: supportMovie.movieNumSuppose + 1 }, function (err) {
+      if (err) {
+        res.json({ status: 1, message: "点赞失败", data: err })
+      }
+      res.json({ status: 0, message: '点赞成功' })
+    })
   })
 });
 router.post('/download', function (req, res, next) {
   if (!req.body.movie_id) {
-    res.json({status: 1, message: "电影id传递失败"})
+    res.json({ status: 1, message: "电影id传递失败" })
   }
   movie.findById(req.body.movie_id, function (err, downloadMovie) {
-      movie.update({_id: req.body.movie_id}, {movieNumDownload: downloadMovie.movieNumDownload + 1}, function (err) {
-          if (err) {
-              res.json({status: 1, message: "下载失败", data: err})
-          }
-          res.json({status: 0, message: '下载成功', data: downloadMovie.movieDownload})
-      })
+    movie.update({ _id: req.body.movie_id }, { movieNumDownload: downloadMovie.movieNumDownload + 1 }, function (err) {
+      if (err) {
+        res.json({ status: 1, message: "下载失败", data: err })
+      }
+      res.json({ status: 0, message: '下载成功', data: downloadMovie.movieDownload })
+    })
   })
 });
 router.post('/findPassword', function (req, res, next) {
@@ -274,8 +274,68 @@ router.post('/findPassword', function (req, res, next) {
     })
   }
 });
-router.post('/sendEmail', function (req, res, next) { });
-router.post('/showEmail', function (req, res, next) { });
+router.post('/sendEmail', function (req, res, next) {
+  if (!req.body.token) {
+    res.json({ status: 1, message: "用户登录状态错误" })
+  }
+  if (!req.body.user_id) {
+    res.json({ status: 1, message: "用户登录状态出错" })
+  }
+  if (!req.body.toUserName) {
+    res.json({ status: 1, message: "未选择相关的用户" })
+  }
+  if (!req.body.title) {
+    res.json({ status: 1, message: '标题不能为空' })
+  }
+  if (!req.body.context) {
+    res.json({ status: 1, message: '内容不能为空' })
+  }
+  if (req.body.token == getMD5Password(req.body.user_id)) {
+    user.findByUsername(req.body.toUserName, function (err, toUser) {
+      if (toUser.length != 0) {
+        var NewEmail = new mail({
+          fromUser: req.body.user_id,
+          toUser: toUser[0]._id,
+          title: req.body.title,
+          context: req.body.context
+        })
+        NewEmail.save(function () {
+          res.json({ status: 0, message: "发送成功" })
+        })
+      } else {
+        res.json({ status: 1, message: '您发送的对象不存在' })
+      }
+    })
+  } else {
+    res.json({ status: 1, message: "用户登录错误" })
+  }
+});
+router.post('/showEmail', function (req, res, next) {
+  if (!req.body.token) {
+    res.json({ status: 1, message: "用户登录状态错误" })
+  }
+  if (!req.body.user_id) {
+    res.json({ status: 1, message: "用户登录状态出错" })
+  }
+  if (!req.body.receive) {
+    res.json({ status: 1, message: "参数出错" })
+  }
+  if (req.body.token == getMD5Password(req.body.user_id)) {
+    if (req.body.receive == 1) {
+      //发送的站内信
+      mail.findByFromUserId(req.body.user_id, function (err, sendMail) {
+        res.json({ status: 0, message: "获取成功", data: sendMail })
+      })
+    } else {
+      //收到的站内信
+      mail.findByToUserId(req.body.user_id, function (err, receiveMail) {
+        res.json({ status: 0, message: '获取成功', data: receiveMail })
+      })
+    }
+  } else {
+    res.json({ status: 1, message: "用户登录错误" })
+  }
+});
 
 function getMD5Password(id) {
   var md5 = crypto.createHash('md5');
